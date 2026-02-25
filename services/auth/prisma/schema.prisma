@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  RESTAURANT
+  RIDER
+  ADMIN
+}
+
+enum AuthProvider {
+  GOOGLE
+  EMAIL
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String?
+  email         String   @unique
+  role          Role?
+  avatar        String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  resetToken    PasswordResetToken?
+}
+
+model Account {
+  id                String       @id @default(uuid())
+  userId            String
+  provider          AuthProvider
+  providerAccountId String       // Google sub ID
+  accessToken       String?      @db.Text
+  refreshToken      String?      @db.Text
+  idToken           String?      @db.Text
+  tokenExpiry       DateTime?
+
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
