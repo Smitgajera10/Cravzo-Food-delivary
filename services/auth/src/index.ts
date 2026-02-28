@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import authRoute from "./routes/auth.js";
 import cors from "cors";
+import { connectDB } from "./utils/prisma.js";
 dotenv.config();
 
 const app = express();
@@ -19,12 +20,19 @@ app.use((err: any, req: any, res: any, next: any) => {
   });
 });
 
-
-
 app.use("/api/auth" , authRoute);
 const PORT  = process.env.PORT || 5000;
 
+async function startServer() {
+  try {
+    await connectDB();
+    app.listen(PORT , ()=>{
+        console.log(`Auth service is running on port ${PORT}`);
+    })
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
 
-app.listen(PORT , ()=>{
-    console.log(`Auth service is running on port ${PORT}`);
-})
+startServer();

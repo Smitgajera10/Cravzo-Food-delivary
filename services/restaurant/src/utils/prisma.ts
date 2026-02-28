@@ -15,3 +15,13 @@ const adapter = new PrismaPg({
 export const prisma = new PrismaClient({
   adapter,
 })
+
+export async function connectDB() {
+  try {
+    await prisma.$connect()
+    console.log('Restaurant database connected successfully')
+  } catch (error) {
+    console.error('Failed to connect to database:', error)
+    process.exit(1)
+  }
+}

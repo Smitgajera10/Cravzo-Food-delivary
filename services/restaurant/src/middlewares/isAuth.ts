@@ -10,17 +10,18 @@ export interface AuthRequest extends Request{
     };
 }
 
-export const isAuth = (
+export const isAuth = async (
     req:AuthRequest,
     res:Response,
     next:NextFunction
-)=>{
+): Promise<void>=>{
     try {
         const authHeader = req.headers.authorization;
         
         if(!authHeader || !authHeader.startsWith("Bearer ")){
             console.log(authHeader)
-            return res.status(401).json({ message: "Unauthorized" });
+            res.status(401).json({ message: "Unauthorized" });
+            return;
         }
 
         const token = authHeader.split(" ")[1] as string;
@@ -30,14 +31,32 @@ export const isAuth = (
             (process.env.JWT_ACCESS_SECRET as string)
         ) as JwtPayload;
         if(!decoded || !decoded.user){
-            return res.status(401).json({
+            res.status(401).json({
                 message:"Invalid token",
             });
+            return;
         }
         req.user = decoded.user;
 
         next();
     } catch (error) {
-        return res.status(401).json({ message: "Invalid or expired token" });
+        res.status(401).json({ message: "Invalid or expired token" });
+        return;
     }
+}
+
+export const isSeller = async (
+    req:AuthRequest,
+    res:Response,
+    next:NextFunction
+) : Promise<void> =>{
+    const user = req.user;
+
+    if(user && user.role !== "RESTAURANT"){
+        res.status(401).json({
+            message: "You are not authorized seller",
+        })
+        return;
+    }
+    next()
 }
