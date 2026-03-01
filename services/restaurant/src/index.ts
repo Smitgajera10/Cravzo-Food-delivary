@@ -6,15 +6,15 @@ import resturentRoutes from './routes/restaurent.js'
 dotenv.config();
 
 const app = express()
+app.use(express.json());
 app.use(cors({
   origin:"*",
   credentials:true,
 }))
-app.use(express.json());
 const PORT  = process.env.PORT || 5001;
 
 
-app.use("/api/restaurent" , resturentRoutes)
+app.use("/api/restaurant" , resturentRoutes)
 
 async function startServer() {
   try {

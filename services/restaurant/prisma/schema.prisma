@@ -9,7 +9,7 @@ datasource db {
 
 model Restaurant {
   id           String     @id @default(uuid())
-  ownerId      String     // from Auth service (User id)
+  ownerId      String     @unique// from Auth service (User id)
   name         String
   description  String?
   image        String
@@ -20,62 +20,58 @@ model Restaurant {
   // postalCode   String
   latitude     Float?
   longitude    Float?
-  phone        String
+  phone        BigInt
   isVerified   Boolean    @default(false)
   isActive     Boolean    @default(false) // approved by admin
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-
-  menus        Menu[]
-  categories   Category[]
-  reviews      Review[]
 
   @@index([ownerId])
   // @@index([city, state])
   @@index([isActive])
 }
 
-model Category {
-  id            String     @id @default(uuid())
-  restaurantId  String
-  name          String
-  description   String?
-  createdAt     DateTime   @default(now())
+// model Category {
+//   id            String     @id @default(uuid())
+//   restaurantId  String
+//   name          String
+//   description   String?
+//   createdAt     DateTime   @default(now())
 
-  restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
-  menus         Menu[]
-}
+//   restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
+//   menus         Menu[]
+// }
 
-model Menu {
-  id           String     @id @default(uuid())
-  restaurantId String
-  categoryId   String?
-  name         String
-  description  String?
-  price        Float
-  isAvailable  Boolean    @default(true)
-  imageUrl     String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+// model Menu {
+//   id           String     @id @default(uuid())
+//   restaurantId String
+//   categoryId   String?
+//   name         String
+//   description  String?
+//   price        Float
+//   isAvailable  Boolean    @default(true)
+//   imageUrl     String?
+//   createdAt    DateTime   @default(now())
+//   updatedAt    DateTime   @updatedAt
 
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
-  category     Category?  @relation(fields: [categoryId], references: [id])
-  // orderItems   OrderItem[]
+//   restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+//   category     Category?  @relation(fields: [categoryId], references: [id])
+//   // orderItems   OrderItem[]
 
-  @@index([restaurantId])
-  @@index([categoryId])
-}
+//   @@index([restaurantId])
+//   @@index([categoryId])
+// }
 
-model Review {
-  id           String     @id @default(uuid())
-  restaurantId String
-  customerId   String     // from Auth service (User id)
-  rating       Int        @default(5)
-  comment      String?
-  createdAt    DateTime   @default(now())
+// model Review {
+//   id           String     @id @default(uuid())
+//   restaurantId String
+//   customerId   String     // from Auth service (User id)
+//   rating       Int        @default(5)
+//   comment      String?
+//   createdAt    DateTime   @default(now())
 
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+//   restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
   
-  @@index([restaurantId])
-  @@index([customerId])
-}
+//   @@index([restaurantId])
+//   @@index([customerId])
+// }

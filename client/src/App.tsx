@@ -7,8 +7,15 @@ import PublicRoute from "./components/publicRoute";
 import SelectRole from "./pages/SelectRole";
 import Navbar from "./components/Navbar";
 import Account from "./pages/Account";
+import { useAppData } from "./context/AppContext";
+import Restaurant from "./pages/Restaurant";
 
 function App() {
+  const {user} = useAppData();
+
+  if(user && user.role === "RESTAURANT"){
+    return <Restaurant />
+  }
   return (
     <BrowserRouter>
     <Navbar />

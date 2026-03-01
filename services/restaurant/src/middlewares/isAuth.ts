@@ -7,6 +7,7 @@ export interface AuthRequest extends Request{
         name: string;
         eamil:string;
         role:string;
+        restaurantId : string
     };
 }
 
