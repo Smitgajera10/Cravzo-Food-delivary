@@ -35,8 +35,10 @@ export const addRestaurant = asyncHandler(async (req: AuthRequest, res) => {
     }
 
     // parse latitude / longitude (they come as strings from multipart/form-data)
-    const lat = typeof latitude === "string" ? parseFloat(latitude) : Number(latitude);
-    const lng = typeof longitude === "string" ? parseFloat(longitude) : Number(longitude);
+    const lat =
+      typeof latitude === "string" ? parseFloat(latitude) : Number(latitude);
+    const lng =
+      typeof longitude === "string" ? parseFloat(longitude) : Number(longitude);
 
     if (Number.isNaN(lat) || Number.isNaN(lng)) {
       return res.status(400).json({ message: "Invalid latitude or longitude" });
@@ -100,7 +102,7 @@ export const addRestaurant = asyncHandler(async (req: AuthRequest, res) => {
       restaurent: safeRestaurent,
     });
   } catch (error: any) {
-    console.log(error)
+    console.log(error);
     return res.status(400).json({
       message: error.message,
     });
@@ -139,13 +141,101 @@ export const fetchMyRestaurant = asyncHandler(async (req: AuthRequest, res) => {
           restaurantId: restaurant.id,
         },
       },
-      process.env.JWT_ACCESS_SECRET as string, {
-        expiresIn : "15d", 
-      }
+      process.env.JWT_ACCESS_SECRET as string,
+      {
+        expiresIn: "15d",
+      },
     );
 
     return res.json({ restaurant: safeRestaurant, token });
   }
 
   res.json({ restaurant: safeRestaurant });
+});
+
+export const updateStatusRestaurant = asyncHandler(
+  async (req: AuthRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(403).json({
+          message: "Please Login",
+        });
+      }
+
+      const { status } = req.body;
+
+      if (typeof status !== "boolean") {
+        return res.status(400).json({
+          message: "status must be boolean",
+        });
+      }
+
+      const restaurant = await prisma.restaurant.update({
+        where: {
+          ownerId: req.user.id,
+        },
+        data: {
+          isActive: status,
+        },
+      });
+
+      if (!restaurant) {
+        return res.status(404).json({
+          message: "Restaurant not found",
+        });
+      }
+
+      const safeRest = {
+        ...restaurant,
+        phone: restaurant.phone?.toString(),
+      };
+
+      res.json({
+        message: "Restaurant Status Updated",
+        restaurant: safeRest,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+);
+
+export const updateRestaurant = asyncHandler(async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(403).json({
+        message: "Please Login",
+      });
+    }
+
+    const { name, description } = req.body;
+
+    const restaurant = await prisma.restaurant.update({
+      where: {
+        ownerId: req.user.id,
+      },
+      data: {
+        name,
+        description,
+      },
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({
+        message: "Restaurant not found",
+      });
+    }
+
+    const safeRest = {
+      ...restaurant,
+      phone: restaurant.phone?.toString(),
+    };
+
+    res.json({
+      message: "Restaurant Updated",
+      restaurant: safeRest,
+    });
+  } catch (error) {
+    console.log(error);
+  }
 });

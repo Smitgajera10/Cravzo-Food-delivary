@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
-import { Toaster } from "react-hot-toast";
 import Home from "./pages/Home";
 import ProtectedRoute from "./components/protectedRoute";
 import PublicRoute from "./components/publicRoute";
@@ -29,7 +28,6 @@ function App() {
           <Route path="/account" element={<Account />} />
         </Route>
       </Routes>
-      <Toaster />
     </BrowserRouter>
   );
 }

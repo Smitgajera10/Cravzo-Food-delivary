@@ -27,17 +27,19 @@ export interface AppContextType {
 export interface IRestaurent {
   id: string;
   name: string;
-  ownerId: String; // from Auth service (User id)
-  description: String;
-  image: String;
-  address: String;
+  ownerId: string; // from Auth service (User id)
+  description: string;
+  image: string;
+  address: string;
   // city         String
   // state        String
   // country      String
   // postalCode   String
   latitude: number;
   longitude: number;
-  phone: String;
+  phone: string;
   isVerified: boolean;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
