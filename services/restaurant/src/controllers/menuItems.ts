@@ -26,9 +26,17 @@ export const addMenuItem = asyncHandler(async (req: AuthRequest, res) => {
 
     const { name, description, price } = req.body;
 
-    if (!name && !price) {
+    if (!name || !price) {
       return res.status(400).json({
         message: "Name and Price are Requried",
+      });
+    }
+
+    // Parse price to float (comes as string from form data)
+    const parsedPrice = typeof price === "string" ? parseFloat(price) : Number(price);
+    if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
+      return res.status(400).json({
+        message: "Price must be a valid positive number",
       });
     }
 
@@ -58,7 +66,7 @@ export const addMenuItem = asyncHandler(async (req: AuthRequest, res) => {
       data: {
         name,
         description,
-        price,
+        price: parsedPrice,
         restaurantId: restaurant.id,
         imageUrl: uploadReasult.url,
       },
@@ -210,7 +218,7 @@ export const toggleMenuItemAvailability = asyncHandler(
       });
 
       res.json({
-        message : `Item Marked as ${item.isAvailable ? "available" : "unavailable"} `,
+        message : `Item Marked as ${updatedItem.isAvailable ? "available" : "unavailable"} `,
         updatedItem,
       });
 

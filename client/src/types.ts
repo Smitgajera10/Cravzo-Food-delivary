@@ -43,3 +43,16 @@ export interface IRestaurent {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface IMenuItem {
+  id: string;
+  restaurantId: string;
+  categoryId: string;
+  name: string;
+  description: string;
+  price: number;
+  isAvailable: boolean;
+  imageUrl: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
