@@ -31,11 +31,8 @@ export interface IRestaurent {
   description: string;
   image: string;
   address: string;
-  // city         String
-  // state        String
-  // country      String
-  // postalCode   String
   latitude: number;
+  distance: number;
   longitude: number;
   phone: string;
   isVerified: boolean;
@@ -55,4 +52,16 @@ export interface IMenuItem {
   imageUrl: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ICart {
+  id: string;
+  userId: string;
+  restaurantId: string;
+  itemId: string;
+  quantity: number;
+  createdAt: Date;
+  updatedAt: Date;
+  restaurant: string | IRestaurent;
+  item: string | IMenuItem;
 }

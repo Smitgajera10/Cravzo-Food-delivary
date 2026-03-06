@@ -53,7 +53,7 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
 
       toast.success(data.message);
       onUpdate(data.restaurant);
-      setEditMode(false)
+      setEditMode(false);
     } catch (err) {
       console.log(err);
       toast.error("faild to update");
@@ -72,33 +72,33 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
         />
       )}
       <div className="p-5 space-y-4">
-        {isSeller && (
-          <div className="flex items-start justify-between">
-            <div>
-              {editMode ? (
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded border px-2 py-1 text-lg font-semibold"
-                />
-              ) : (
-                <h2 className="text-xl font-semibold">{restaurant.name}</h2>
-              )}
+        <div className="flex items-start justify-between">
+          <div>
+            {editMode ? (
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded border px-2 py-1 text-lg font-semibold"
+              />
+            ) : (
+              <h2 className="text-xl font-semibold">{restaurant.name}</h2>
+            )}
 
-              <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 ">
-                <BiMapPin className="h-4 w-4 text-red-500" />
-                {restaurant.address || "Location unavailable"}
-              </div>
+            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 ">
+              <BiMapPin className="h-4 w-4 text-red-500" />
+              {restaurant.address || "Location unavailable"}
             </div>
+          </div>
 
+          {isSeller && (
             <button
               onClick={() => setEditMode(!editMode)}
               className="text-gray-500 hover:text-black"
             >
               <BiEdit size={18} />
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {editMode ? (
           <textarea

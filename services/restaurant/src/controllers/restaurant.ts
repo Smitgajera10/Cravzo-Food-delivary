@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import getBuffer from "../utils/datauri.js";
 import { prisma } from "../utils/prisma.js";
 import jwt from "jsonwebtoken";
+import { Prisma } from "@prisma/client";
 
 export const addRestaurant = asyncHandler(async (req: AuthRequest, res) => {
   try {
@@ -238,4 +239,85 @@ export const updateRestaurant = asyncHandler(async (req: AuthRequest, res) => {
   } catch (error) {
     console.log(error);
   }
+});
+
+export const getNearbyRestaurant = asyncHandler(async (req, res) => {
+  const { latitude, longitude, radius = 5000, search = "" } = req.query;
+
+  if (!latitude || !longitude) {
+    return res.status(400).json({
+      message: "Latitude and longitude are required",
+    });
+  }
+
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  const radiusMeters = Number(radius);
+  const searchQuery = `%${String(search).toLowerCase()}%`;
+
+  const restaurants = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT *,
+      ST_Distance(
+        location,
+        ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+      ) AS distance
+    FROM "Restaurant"
+    WHERE
+      "isVerified" = true
+      AND LOWER(name) LIKE ${searchQuery}
+      AND ST_DWithin(
+        location,
+        ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+        ${radiusMeters}
+      )
+    ORDER BY "isActive" DESC, distance ASC
+  `);
+  
+  const formattedRestaurants = restaurants.map((r) => ({
+    ...r,
+    phone: r.phone?.toString(),
+  }));
+
+  res.json({
+    success: true,
+    count: formattedRestaurants.length,
+    restaurants: formattedRestaurants,
+  });
+});
+
+
+export const fetchSigleRestaurant = asyncHandler(async(req , res)=>{
+  try {
+    const resid = Array.isArray(req.params.id)
+        ? req.params.id[0]
+        : req.params.id;
+
+  if (!resid) {
+    return res.status(400).json({
+      message: "Restaurant ID is required",
+    });
+  }
+
+  const restaurant = await prisma.restaurant.findUnique({
+    where: {
+      id: resid,
+    },
+  });
+
+  if (!restaurant) {
+    return res.status(404).json({
+      message: "Restaurant not found",
+    });
+  }
+
+  const safeRestaurant = {
+    ...restaurant,
+    phone: restaurant.phone?.toString(),
+  };
+
+  return res.json(safeRestaurant);
+  } catch (error) {
+    console.log(error)
+  }
+  
 });

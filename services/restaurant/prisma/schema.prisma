@@ -1,48 +1,36 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [postgis]
 }
-
 
 model Restaurant {
-  id           String     @id @default(uuid())
-  ownerId      String     @unique// from Auth service (User id)
-  name         String
-  description  String?
-  image        String
-  address      String
-  // city         String
-  // state        String
-  // country      String
-  // postalCode   String
-  latitude     Float?
-  longitude    Float?
-  phone        BigInt
-  isVerified   Boolean    @default(false)
-  isActive     Boolean    @default(false) // approved by admin
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  
-  menus        Menu[]
+  id          String   @id @default(uuid())
+  ownerId     String   @unique
+  name        String
+  description String?
+  image       String
+  address     String
+  latitude    Float?
+  longitude   Float?
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  phone       BigInt
+  location    Unsupported("geography(Point,4326)")?
+
+  menus Menu[]
+  cart  Cart[]
 
   @@index([ownerId])
-  // @@index([city, state])
   @@index([isActive])
+  @@index([location], map: "restaurant_location_gix", type: Gist)
 }
-
-// model Category {
-//   id            String     @id @default(uuid())
-//   restaurantId  String
-//   name          String
-//   description   String?
-//   createdAt     DateTime   @default(now())
-
-//   restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
-//   menus         Menu[]
-// }
 
 model Menu {
   id           String     @id @default(uuid())
@@ -56,24 +44,27 @@ model Menu {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
-  // category     Category?  @relation(fields: [categoryId], references: [id])
-  // orderItems   OrderItem[]
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  cartItems  Cart[]
 
   @@index([restaurantId])
-  // @@index([categoryId])
 }
 
-// model Review {
-//   id           String     @id @default(uuid())
-//   restaurantId String
-//   customerId   String     // from Auth service (User id)
-//   rating       Int        @default(5)
-//   comment      String?
-//   createdAt    DateTime   @default(now())
+model Cart {
+  id           String   @id @default(uuid())
+  userId       String
+  restaurantId String
+  itemId       String
+  quantity     Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-//   restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
-  
-//   @@index([restaurantId])
-//   @@index([customerId])
-// }
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  menu       Menu       @relation(fields: [itemId], references: [id])
+
+  @@index([userId])
+  @@index([itemId])
+  @@index([restaurantId])
+
+  @@unique([userId, restaurantId, itemId])
+}

@@ -8,6 +8,7 @@ import Navbar from "./components/Navbar";
 import Account from "./pages/Account";
 import { useAppData } from "./context/AppContext";
 import Restaurant from "./pages/Restaurant";
+import RestaurantPage from "./pages/RestaurantPage";
 
 function App() {
   const {user} = useAppData();
@@ -24,6 +25,7 @@ function App() {
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
+          <Route path="/restaurant/:id" element={<RestaurantPage />} />
           <Route path="/select-role" element={<SelectRole />} />
           <Route path="/account" element={<Account />} />
         </Route>
