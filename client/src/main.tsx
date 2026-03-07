@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App";
 import { AppProvider } from './context/AppContext';
+import 'leaflet/dist/leaflet.css'
 
 export const authService = import.meta.env.VITE_AUTH_SERVICE;
 export const restaurantService = import.meta.env.VITE_RESTAURANT_SERVICE;

@@ -9,18 +9,18 @@ datasource db {
 }
 
 model Restaurant {
-  id          String   @id @default(uuid())
-  ownerId     String   @unique
+  id          String                                @id @default(uuid())
+  ownerId     String                                @unique
   name        String
   description String?
   image       String
   address     String
   latitude    Float?
   longitude   Float?
-  isVerified  Boolean  @default(false)
-  isActive    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isVerified  Boolean                               @default(false)
+  isActive    Boolean                               @default(false)
+  createdAt   DateTime                              @default(now())
+  updatedAt   DateTime                              @updatedAt
   phone       BigInt
   location    Unsupported("geography(Point,4326)")?
 
@@ -33,16 +33,16 @@ model Restaurant {
 }
 
 model Menu {
-  id           String     @id @default(uuid())
+  id           String   @id @default(uuid())
   restaurantId String
   categoryId   String?
   name         String
   description  String?
   price        Float
-  isAvailable  Boolean    @default(true)
+  isAvailable  Boolean  @default(true)
   imageUrl     String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   restaurant Restaurant @relation(fields: [restaurantId], references: [id])
   cartItems  Cart[]
@@ -62,9 +62,23 @@ model Cart {
   restaurant Restaurant @relation(fields: [restaurantId], references: [id])
   menu       Menu       @relation(fields: [itemId], references: [id])
 
+  @@unique([userId, restaurantId, itemId])
   @@index([userId])
   @@index([itemId])
   @@index([restaurantId])
+}
 
-  @@unique([userId, restaurantId, itemId])
+model Address {
+  id               String                                @id @default(uuid())
+  userId           String
+  mobile           BigInt
+  formattedAddress String
+  latitude         Float
+  longitude        Float
+  location         Unsupported("geography(Point,4326)")?
+  createdAt        DateTime                              @default(now())
+  updatedAt        DateTime                              @updatedAt
+
+  @@index([userId])
+  @@index([location], map: "Address_location_gix", type: Gist)
 }

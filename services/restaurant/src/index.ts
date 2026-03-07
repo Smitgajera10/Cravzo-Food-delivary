@@ -5,6 +5,7 @@ import { connectDB } from './utils/prisma.js';
 import resturentRoutes from './routes/restaurent.js'
 import itemRoutes from './routes/menuItems.js'
 import cartRoutes from './routes/cart.js'
+import addressRoutes from './routes/address.js'
 dotenv.config();
 
 const app = express()
@@ -19,6 +20,7 @@ const PORT  = process.env.PORT || 5001;
 app.use("/api/restaurant" , resturentRoutes)
 app.use("/api/item" , itemRoutes)
 app.use("/api/cart" , cartRoutes)
+app.use("/api/address" , addressRoutes)
 
 async function startServer() {
   try {
