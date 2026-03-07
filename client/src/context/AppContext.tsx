@@ -40,7 +40,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [cart , setCart] = useState<ICart[]>([]);
   const [subtotal , setSubtotal] = useState(0);
   const [quantity , setQuantity] = useState(0);
-  async function fetchcart() {
+  async function fetchCart() {
     if(!user || user.role !== "CUSTOMER") return;
     try {
       const {data} = await axios.get(`${restaurantService}/api/cart/all`,{
@@ -48,7 +48,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
-      console.log("fetched")
+      
       setCart(data.cart || []);
       setSubtotal(data.subtotal || 0);
       setQuantity(data.cartLength || 0)
@@ -63,7 +63,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   useEffect(() => {
     if(user && user.role === "CUSTOMER"){
-      fetchcart();
+      fetchCart();
     }
   }, [user]);
 
@@ -100,7 +100,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   return (
     <AppContext.Provider
-      value={{ isAuth, loading, setIsAuth, setLoading, setUser, user , location , loadingLocation , city }}
+      value={{ isAuth, loading, setIsAuth, setLoading, setUser, user , location , loadingLocation , city ,cart , fetchCart , quantity , subtotal }}
     >
       {children}
       <Toaster />
