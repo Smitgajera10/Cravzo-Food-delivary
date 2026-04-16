@@ -26,6 +26,7 @@ model Restaurant {
 
   menus Menu[]
   cart  Cart[]
+  orders Order[]
 
   @@index([ownerId])
   @@index([isActive])
@@ -81,4 +82,84 @@ model Address {
 
   @@index([userId])
   @@index([location], map: "Address_location_gix", type: Gist)
+}
+
+
+enum OrderStatus {
+  PLACED
+  ACCEPTED
+  PREPARING
+  READY_FOR_RIDER
+  RIDER_ASSIGNED
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  RAZORPAY
+  STRIPE
+  COD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model OrderItem {
+  id       String  @id @default(uuid())
+
+  orderId  String
+  itemId   String
+  name     String
+  price    Float
+  quantity Int
+
+  order    Order   @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+model Order {
+  id             String   @id @default(uuid())
+  userId         String
+  restaurantId   String
+  restaurantName String
+
+  riderId        String?
+  riderPhone     BigInt?
+  riderName      String?
+
+  subTotal       Float
+  deliveryFee    Float
+  platformFee    Float
+  riderAmount    Float      // payout for rider
+  distance       Float      // delivery distance in KM
+  totalAmount    Float
+
+  addressId      String?
+
+  deliveryAddress String
+  deliveryMobile  BigInt
+  deliveryLat     Float
+  deliveryLng     Float
+
+  status         OrderStatus   @default(PLACED)
+  paymentMethod  PaymentMethod
+  paymentStatus  PaymentStatus @default(PENDING)
+
+  expiresAt      DateTime? 
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items          OrderItem[]
+
+  restaurant     Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@index([userId])
+  @@index([restaurantId])
+  @@index([status])
 }
