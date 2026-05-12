@@ -1,5 +1,6 @@
 import { AuthRequest } from "../middlewares/isAuth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { serializeBigInt } from "../utils/helpers.js";
 import { prisma } from "../utils/prisma.js";
 
 export const AddAddress = asyncHandler(async (req: AuthRequest, res) => {
@@ -111,14 +112,8 @@ export const getMyaddresses = asyncHandler(async (req: AuthRequest, res) => {
       }
     });
 
-    // convert BigInt fields before serialization
-    const serialized = addresses.map(a => ({
-      ...a,
-      mobile: a.mobile.toString(),
-    }));
-
     res.json({
-      addresses: serialized,
+      addresses: serializeBigInt(addresses),
     });
   } catch (error) {
     console.log(error);

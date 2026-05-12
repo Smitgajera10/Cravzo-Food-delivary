@@ -105,7 +105,7 @@ const Cart = () => {
 
       <div className="space-y-4">
         {cart.map((cartItem: ICart) => {
-          const item = cartItem.item as IMenuItem;
+          const item = cartItem.menu as IMenuItem;
           const isLoading = loadingItemId === item.id;
 
           return (

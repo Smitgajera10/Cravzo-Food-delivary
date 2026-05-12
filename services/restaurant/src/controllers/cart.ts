@@ -1,5 +1,6 @@
 import { AuthRequest } from "../middlewares/isAuth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { serializeBigInt } from "../utils/helpers.js";
 import { prisma } from "../utils/prisma.js";
 
 export const addTocart = asyncHandler(async (req: AuthRequest, res) => {
@@ -80,6 +81,10 @@ export const fetchMycart = asyncHandler(async (req: AuthRequest, res) => {
       where: {
         userId,
       },
+      include :{
+        menu: true,
+        restaurant: true,
+      }
     });
 
     let subtotal = 0;
@@ -96,7 +101,7 @@ export const fetchMycart = asyncHandler(async (req: AuthRequest, res) => {
       success: true,
       cartLength,
       subtotal,
-      cart: cartItems,
+      cart: serializeBigInt(cartItems),
     });
   } catch (error) {
     console.log(error);

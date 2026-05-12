@@ -67,5 +67,5 @@ export interface ICart {
   createdAt: Date;
   updatedAt: Date;
   restaurant: string | IRestaurent;
-  item: string | IMenuItem;
+  menu: string | IMenuItem;
 }

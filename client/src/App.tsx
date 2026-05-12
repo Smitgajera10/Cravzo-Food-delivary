@@ -12,22 +12,32 @@ import RestaurantPage from "./pages/RestaurantPage";
 import Cart from "./pages/Cart";
 import AddAddressPage from "./pages/Address";
 import Checkout from "./pages/Checkout";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import OrderSuccess from "./pages/OrderSuccess";
 
 function App() {
-  const {user} = useAppData();
+  const { user } = useAppData();
 
-  if(user && user.role === "RESTAURANT"){
-    return <Restaurant />
+  if (user && user.role === "RESTAURANT") {
+    return <Restaurant />;
   }
   return (
     <BrowserRouter>
-    <Navbar />
+      <Navbar />
       <Routes>
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
+          <Route
+            path="/paymentsuccess/:paymentId"
+            element={<PaymentSuccess />}
+          />
+          <Route
+            path="/ordersuccess"
+            element={<OrderSuccess />}
+          />
           <Route path="/address" element={<AddAddressPage />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/restaurant/:id" element={<RestaurantPage />} />

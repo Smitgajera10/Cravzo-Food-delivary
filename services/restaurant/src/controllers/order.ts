@@ -1,7 +1,8 @@
 import { AuthRequest } from "../middlewares/isAuth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getDistanceFromDB, getDistanceHaversine } from "../utils/helpers.js";
 import { prisma } from "../utils/prisma.js";
-import { OrderStatus, PaymentStatus } from "@prisma/client";
+import { OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
 
 export const createOrder = asyncHandler(async (req: AuthRequest, res) => {
   const user = req.user;
@@ -12,7 +13,7 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res) => {
     });
   }
 
-  const { paymentMethod, addressId, distance } = req.body;
+  const { paymentMethod, addressId } = req.body;
 
   if (!addressId) {
     return res.status(400).json({
@@ -32,6 +33,24 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res) => {
       message: "Address not found",
     });
   }
+  //   lat2: number,
+  //   lon2: number,
+  // ): number => {
+  //   const R = 6371;
+  //   const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  //   const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
+  //   const a =
+  //     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+  //     Math.cos((lat1 * Math.PI) / 180) *
+  //       Math.cos((lat2 * Math.PI) / 180) *
+  //       Math.sin(dLon / 2) *
+  //       Math.sin(dLon / 2);
+
+  //   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  //   return +(R * c).toFixed(2);
+  // };
 
   const cartItems = await prisma.cart.findMany({
     where: {
@@ -68,6 +87,31 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res) => {
     return res.status(400).json({
       message: "Restaurant not available",
     });
+  }
+
+  //calculate distance
+  let distance = 0;
+
+  // If both restaurant and address have latitude/longitude use DB distance, otherwise fallback to haversine
+  try {
+    distance = await getDistanceFromDB(restaurantId, addressId);
+  } catch (err) {
+    // fallback
+    if (
+      restaurant.latitude == null ||
+      restaurant.longitude == null ||
+      address.latitude == null ||
+      address.longitude == null
+    ) {
+      throw new Error("Location coordinates not available");
+    }
+
+    distance = getDistanceHaversine(
+      restaurant.latitude,
+      restaurant.longitude,
+      address.latitude,
+      address.longitude,
+    );
   }
 
   let subTotal = 0;
@@ -131,48 +175,52 @@ export const createOrder = asyncHandler(async (req: AuthRequest, res) => {
 
   res.status(201).json({
     message: "Order created successfully",
-    orderId : order.id,
-    amount : order.totalAmount,
+    orderId: order.id,
+    amount: order.totalAmount,
   });
 });
 
-export const fetchOrderForPayment = asyncHandler(async(req : AuthRequest , res)=>{
-    if(req.headers["x-internal-key"] != process.env.INTERNAL_SERVICE_KEY){
-        return res.status(403).json({
-            message : "Forbidden",
-        })
+export const fetchOrderForPayment = asyncHandler(
+  async (req: AuthRequest, res) => {
+    if (req.headers["x-internal-key"] != process.env.INTERNAL_SERVICE_KEY) {
+      return res.status(403).json({
+        message: "Forbidden",
+      });
     }
 
-  const orderId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const orderId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
 
-  if(!orderId){
-    return res.status(400).json({
-      message : "Order ID is required",
-    })
-  }
-
-  const order = await prisma.order.findUnique({
-    where : {
-      id : orderId,
+    if (!orderId) {
+      return res.status(400).json({
+        message: "Order ID is required",
+      });
     }
-  })
 
-  if(!order){
-    return res.status(404).json({
-      message : "Order not found",
-    })
-  }
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+    });
 
-  if(order.paymentStatus === PaymentStatus.PAID){
-    return res.status(400).json({
-      message : "Order already paid",
-    })
-  }
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
 
-  res.status(200).json({
-    message : "Order fetched successfully",
-    orderId : order.id,
-    amount : order.totalAmount,
-    currency : "INR",
-  })
-})
+    if (order.paymentStatus === PaymentStatus.PAID) {
+      return res.status(400).json({
+        message: "Order already paid",
+      });
+    }
+
+    res.status(200).json({
+      message: "Order fetched successfully",
+      orderId: order.id,
+      amount: order.totalAmount,
+      currency: "INR",
+    });
+  },
+);
