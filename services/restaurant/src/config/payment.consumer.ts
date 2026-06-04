@@ -1,48 +1,73 @@
-import { prisma } from '../utils/prisma.js';
-import { getChannel } from './rabbitmq.js'
+import axios from "axios";
+import { prisma } from "../utils/prisma.js";
+import { getChannel } from "./rabbitmq.js";
 
-export const startPaymentConsumer = async()=>{
-    const channel = getChannel();
+export const startPaymentConsumer = async () => {
+  const channel = getChannel();
 
-    channel.consume(process.env.PAYMENT_QUEUE! , async(msg)=>{
-        if(!msg) return;
+  channel.consume(process.env.PAYMENT_QUEUE!, async (msg) => {
+    if (!msg) return;
 
-        try {
-            const event = JSON.parse(msg.content.toString());
+    try {
+      const event = JSON.parse(msg.content.toString());
 
-            if(event.type != "PAYMENT_SUCCESS"){
-                channel.ack(msg)
-                return;
-            }
+      if (event.type != "PAYMENT_SUCCESS") {
+        channel.ack(msg);
+        return;
+      }
 
-            const {orderId} = event.data;
+      const { orderId } = event.data;
 
-            const order = await prisma.order.update({
-                where : {
-                    id : orderId,
-                    paymentStatus : {
-                        not : "PAID"
-                    }
-                },
-                data : {
-                    paymentStatus : "PAID",
-                    status : "PLACED",
-                    expiresAt: null
-                }
-                
-            })
+      const result = await prisma.order.updateMany({
+        where: {
+          id: orderId,
+          paymentStatus: {
+            not: "PAID",
+          },
+        },
+        data: {
+          paymentStatus: "PAID",
+          status: "PLACED",
+          expiresAt: null,
+        },
+      });
 
-            if(!order){
-                channel.ack(msg);
-                return;
-            }
+      if (result.count === 0) {
+        channel.ack(msg);
+        return;
+      }
 
-            console.log(`✅Order with id ${orderId} marked as PAID and PLACED`);
+      const order = await prisma.order.findUnique({
+        where: {
+          id: orderId,
+        },
+      });
 
+      if (!order) {
+        channel.ack(msg);
+        return;
+      }
 
-            channel.ack(msg);
-        } catch (error) {
-            console.error("❌ payment cosumer error:", error);
-        }
-    })
-}
+      console.log(`✅Order with id ${orderId} marked as PAID and PLACED`);
+
+      await axios.post(
+        `${process.env.REALTIME_SERVICE}/api/internal/emit`,
+        {
+          event: "order:new",
+          room: `restaurant:${order.restaurantId}`,
+          payload: {
+            orderId: order.id,
+          },
+        },
+        {
+          headers: {
+            "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "",
+          },
+        },
+      );
+      channel.ack(msg);
+    } catch (error) {
+      console.error("❌ payment cosumer error:", error);
+    }
+  });
+};

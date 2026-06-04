@@ -22,10 +22,10 @@ export interface AppContextType {
   location: LocationData | null;
   loadingLocation: boolean;
   city: string;
-  cart : ICart[] | null;
-  fetchCart : ()=>Promise<void>;
-  subtotal : number;
-  quantity : number;
+  cart: ICart[] | null;
+  fetchCart: () => Promise<void>;
+  subtotal: number;
+  quantity: number;
 }
 
 export interface IRestaurent {
@@ -68,4 +68,45 @@ export interface ICart {
   updatedAt: Date;
   restaurant: string | IRestaurent;
   menu: string | IMenuItem;
+}
+
+export interface IOrder {
+  id: String;
+  userId: String;
+  restaurantId: String;
+  restaurantName: String;
+
+  riderId?: String;
+  riderPhone: BigInt;
+  riderName: String;
+
+  subTotal: number;
+  deliveryFee: number;
+  platformFee: number;
+  riderAmount: number;
+  distance: number;
+  totalAmount: number;
+
+  addressId: String;
+
+  deliveryAddress: String;
+  deliveryMobile: BigInt;
+  deliveryLat: number;
+  deliveryLng: number;
+
+  status: string;
+  paymentMethod: string;
+  paymentStatus: string;
+
+  expiresAt: Date;
+
+  createdAt: Date;
+  updatedAt: Date;
+
+  items: {
+    itemId: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }[];
 }

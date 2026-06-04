@@ -1,6 +1,8 @@
+import axios from "axios";
 import { AuthRequest } from "../middlewares/isAuth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { getDistanceFromDB, getDistanceHaversine } from "../utils/helpers.js";
+import { serializeBigInt } from "../utils/helpers.js";
 import { prisma } from "../utils/prisma.js";
 import { OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
 
@@ -224,3 +226,199 @@ export const fetchOrderForPayment = asyncHandler(
     });
   },
 );
+
+export const fetchRestaurantOrders = asyncHandler(
+  async (req: AuthRequest, res) => {
+    const user = req.user;
+
+    const { restaurantId } = Array.isArray(req.params)
+      ? req.params[0]
+      : req.params;
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    if (!restaurantId) {
+      return res.status(400).json({
+        message: "Restaurant ID is required",
+      });
+    }
+
+    const limit = req.query.limit ? Number(req.query.limit) : 0;
+
+    const orders = await prisma.order.findMany({
+      where: {
+        restaurantId,
+        paymentStatus: PaymentStatus.PAID,
+      },
+      include: {
+        items: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      ...(limit ? { take: limit } : {}),
+    });
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders: serializeBigInt(orders),
+    });
+  },
+);
+
+const ALLOWED_STATUSES = ["ACCEPTED", "PREPARING", "READY_FOR_RIDER"] as const;
+
+export const updateOrderStatus = asyncHandler(async (req: AuthRequest, res) => {
+  const user = req.user;
+
+  const { orderId } = Array.isArray(req.params) ? req.params[0] : req.params;
+  const { status } = req.body;
+
+  if (!user) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+
+  if (!ALLOWED_STATUSES.includes(status)) {
+    return res.status(400).json({
+      message: "Invalid order status",
+    });
+  }
+
+  try {
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+    });
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+
+    if (order.paymentStatus !== PaymentStatus.PAID) {
+      return res.status(400).json({
+        message: "Cannot update status of unpaid order",
+      });
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({
+      where: {
+        id: order.restaurantId,
+      },
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({
+        message: "Restaurant not found",
+      });
+    }
+
+    if (restaurant.ownerId !== user.id) {
+      return res.status(401).json({
+        message: "You are not allowed to update this order",
+      });
+    }
+
+    order.status = status as OrderStatus;
+
+    await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        status: order.status,
+      },
+    });
+
+    await axios.post(
+      `${process.env.REALTIME_SERVICE}/api/internal/emit`,
+      {
+        event: "order:update",
+        room: `user:${order.userId}`,
+        payload: {
+          orderId: order.id,
+          status: order.status,
+        },
+      },
+      {
+        headers: {
+          "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "",
+        },
+      },
+    );
+
+    //now assign riders
+
+    res.status(200).json({
+      message: "Order status updated successfully",
+      order: serializeBigInt(order),
+    });
+  } catch (error) {
+    console.log("Error updating order status:", error);
+  }
+});
+
+export const getMyOrders = asyncHandler(async (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+
+  const orders = await prisma.order.findMany({
+    where: {
+      userId: req.user.id,
+      paymentStatus: PaymentStatus.PAID,
+    },
+    include: {
+      items: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  res.json({
+    orders: serializeBigInt(orders),
+  });
+});
+
+export const fetchSingleOrder = asyncHandler(async (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+
+  const { id } = Array.isArray(req.params) ? req.params[0] : req.params;
+
+  const order = await prisma.order.findUnique({
+    where: {
+      id: id,
+    },
+    include: {
+      items: true,
+    },
+  });
+
+  if (!order) {
+    return res.status(404).json({
+      message: "Order not found",
+    });
+  }
+
+  if (order.userId !== req.user.id) {
+    return res.status(403).json({
+      message: "You are not allowed to view this order",
+    });
+  }
+  res.json({ order: serializeBigInt(order) });
+});
