@@ -5,6 +5,7 @@ import { getDistanceFromDB, getDistanceHaversine } from "../utils/helpers.js";
 import { serializeBigInt } from "../utils/helpers.js";
 import { prisma } from "../utils/prisma.js";
 import { OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
+import { publishEvent } from "../config/order.publisher.js";
 
 export const createOrder = asyncHandler(async (req: AuthRequest, res) => {
   const user = req.user;
@@ -327,14 +328,30 @@ export const updateOrderStatus = asyncHandler(async (req: AuthRequest, res) => {
       });
     }
 
-    order.status = status as OrderStatus;
+    const locationResult = await prisma.$queryRaw<
+      { longitude: number; latitude: number }[]
+    >(Prisma.sql`
+        SELECT
+          ST_X(location::geometry) AS longitude,
+          ST_Y(location::geometry) AS latitude
+        FROM "Restaurant"
+        WHERE id = ${restaurant.id}
+      `);
 
-    await prisma.order.update({
+    const [coords] = locationResult;
+
+    if (!coords) {
+      return res.status(500).json({
+        message: "Restaurant location not found",
+      });
+    }
+
+    const updatedOrder = await prisma.order.update({
       where: {
         id: order.id,
       },
       data: {
-        status: order.status,
+        status,
       },
     });
 
@@ -342,10 +359,10 @@ export const updateOrderStatus = asyncHandler(async (req: AuthRequest, res) => {
       `${process.env.REALTIME_SERVICE}/api/internal/emit`,
       {
         event: "order:update",
-        room: `user:${order.userId}`,
+        room: `user:${updatedOrder.userId}`,
         payload: {
-          orderId: order.id,
-          status: order.status,
+          orderId: updatedOrder.id,
+          status: updatedOrder.status,
         },
       },
       {
@@ -356,6 +373,21 @@ export const updateOrderStatus = asyncHandler(async (req: AuthRequest, res) => {
     );
 
     //now assign riders
+    if (updatedOrder.status === "READY_FOR_RIDER") {
+      console.log(
+        "Publishing order ready event to rider service for orderId:",
+        order.id,
+      );
+
+      await publishEvent("ORDER_READY_FOR_RIDER", {
+        orderId: updatedOrder.id,
+        restaurantId: updatedOrder.restaurantId,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
+
+      console.log("Event published successfully");
+    }
 
     res.status(200).json({
       message: "Order status updated successfully",
@@ -421,4 +453,226 @@ export const fetchSingleOrder = asyncHandler(async (req: AuthRequest, res) => {
     });
   }
   res.json({ order: serializeBigInt(order) });
+});
+
+export const assignRiderToOrder = asyncHandler(async (req, res) => {
+  try {
+    if (req.headers["x-internal-key"] != process.env.INTERNAL_SERVICE_KEY) {
+      return res.status(403).json({
+        message: "Forbidden",
+      });
+    }
+
+    const { orderId, riderId, riderName, riderPhone } = req.body;
+
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+    });
+
+    if (order?.riderId !== null) {
+      return res.status(400).json({
+        message: "Order alredy taken",
+      });
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        riderId,
+        riderName,
+        riderPhone,
+        status: "RIDER_ASSIGNED",
+      },
+    });
+
+    await axios.post(
+      `${process.env.REALTIME_SERVICE}/api/internal/emit`,
+      {
+        event: "order:rider_assigned",
+        room: `user:${updatedOrder.userId}`,
+        payload: updatedOrder,
+      },
+      {
+        headers: {
+          "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "",
+        },
+      },
+    );
+
+    await axios.post(
+      `${process.env.REALTIME_SERVICE}/api/internal/emit`,
+      {
+        event: "order:rider_assigned",
+        room: `restaurant:${updatedOrder.restaurantId}`,
+        payload: updatedOrder,
+      },
+      {
+        headers: {
+          "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "",
+        },
+      },
+    );
+
+    res.json({
+      message: "Rider assigned successfully",
+      success: true,
+      order: serializeBigInt(updatedOrder),
+    });
+  } catch (error) {
+    console.log("Error assigning rider to order:", error);
+  }
+});
+
+export const getCurrentOrderForRider = asyncHandler(async (req, res) => {
+  try {
+    if (req.headers["x-internal-key"] != process.env.INTERNAL_SERVICE_KEY) {
+      return res.status(403).json({
+        message: "Forbidden",
+      });
+    }
+
+    const { riderId } = req.query;
+
+    if (!riderId) {
+      return res.status(400).json({
+        message: "Rider ID is required",
+      });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        riderId: String(riderId),
+        status: {
+          notIn: ["DELIVERED", "CANCELLED"],
+        },
+        include: {
+          restaurant: true,
+          items: true,
+        },
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "No active orders found for this rider",
+      });
+    }
+
+    res.json(serializeBigInt(order));
+  } catch (error) {
+    console.log("Error fetching current orders for rider:", error);
+  }
+});
+
+export const updateOrderStatusByRider = asyncHandler(async (req, res) => {
+  try {
+    if (req.headers["x-internal-key"] != process.env.INTERNAL_SERVICE_KEY) {
+      return res.status(403).json({
+        message: "Forbidden",
+      });
+    }
+
+    const { orderId } = Array.isArray(req.params) ? req.params[0] : req.params;
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+
+    if (order.status === "RIDER_ASSIGNED") {
+      const updatedOrder = await prisma.order.update({
+        where: {
+          id: order.id,
+        },
+        data: {
+          status: "PICKED_UP",
+        },
+      });
+
+      await axios.post(
+        `${process.env.REALTIME_SERVICE}/api/internal/emit`,
+        {
+          event: "order:rider_assigned",
+          room: `restaurant:${updatedOrder.userId}`,
+          payload: updatedOrder,
+        },
+        {
+          headers: {
+            "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "",
+          },
+        },
+      );
+
+      await axios.post(
+        `${process.env.REALTIME_SERVICE}/api/internal/emit`,
+        {
+          event: "order:rider_assigned",
+          room: `user:${updatedOrder.userId}`,
+          payload: updatedOrder,
+        },
+        {
+          headers: {
+            "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "",
+          },
+        },
+      );
+
+      return res.json({
+        message: "Order status updated successfully",
+      });
+    }
+
+    if(order.status === "PICKED_UP"){
+      const updatedOrder = await prisma.order.update({
+        where: {
+          id: order.id,
+        },
+        data: {
+          status: "DELIVERED",
+        },
+      });
+
+      await axios.post(
+        `${process.env.REALTIME_SERVICE}/api/internal/emit`,
+        {
+          event: "order:rider_assigned",
+          room: `restaurant:${updatedOrder.userId}`,
+          payload: updatedOrder,
+        },
+        {
+          headers: {
+            "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "",
+          },
+        },
+      );
+
+      await axios.post(
+        `${process.env.REALTIME_SERVICE}/api/internal/emit`,
+        {
+          event: "order:rider_assigned",
+          room: `user:${updatedOrder.userId}`,
+          payload: updatedOrder,
+        },
+        {
+          headers: {
+            "x-internal-key": process.env.INTERNAL_SERVICE_KEY || "",
+          },
+        },
+      );
+
+      return res.json({
+        message: "Order status updated successfully",
+      });
+    }
+  } catch (error) {}
 });

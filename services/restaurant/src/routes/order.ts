@@ -1,6 +1,6 @@
 import express from "express";
 import { isAuth, isSeller } from "../middlewares/isAuth.js";
-import { createOrder, fetchOrderForPayment, fetchRestaurantOrders, fetchSingleOrder, getMyOrders, updateOrderStatus } from "../controllers/order.js";
+import { assignRiderToOrder, createOrder, fetchOrderForPayment, fetchRestaurantOrders, fetchSingleOrder, getCurrentOrderForRider, getMyOrders, updateOrderStatus, updateOrderStatusByRider } from "../controllers/order.js";
 
 const router = express.Router();
 
@@ -10,5 +10,8 @@ router.get("/restaurant/:restaurantId", isAuth , isSeller , fetchRestaurantOrder
 router.put("/:orderId", isAuth , isSeller , updateOrderStatus);
 router.get("/my", isAuth  , getMyOrders);
 router.get("/:id", isAuth  , fetchSingleOrder);
+router.put("/assign/rider", assignRiderToOrder);
+router.get("/current/rider", getCurrentOrderForRider);
+router.put("/update/status/rider", updateOrderStatusByRider);
 
 export default router;

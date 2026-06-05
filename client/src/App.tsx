@@ -16,12 +16,24 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import OrderSuccess from "./pages/OrderSuccess";
 import Orders from "./pages/Orders";
 import OrderPage from "./pages/OrderPage";
+import RiderDashboard from "./pages/RiderDashboard";
 
 function App() {
-  const { user } = useAppData();
+  const { user, loading } = useAppData();
+
+  if (loading) {
+    return (
+      <h1 className="text-2xl font-bold text-red-500 text-center mt-56">
+        Loading...
+      </h1>
+    );
+  }
 
   if (user && user.role === "RESTAURANT") {
     return <Restaurant />;
+  }
+  if (user && user.role === "RIDER") {
+    return <RiderDashboard />;
   }
   return (
     <BrowserRouter>
@@ -36,18 +48,9 @@ function App() {
             path="/paymentsuccess/:paymentId"
             element={<PaymentSuccess />}
           />
-          <Route
-            path="/orders"
-            element={<Orders />}
-          />
-          <Route
-            path="/order/:id"
-            element={<OrderPage />}
-          />
-          <Route
-            path="/ordersuccess"
-            element={<OrderSuccess />}
-          />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/order/:id" element={<OrderPage />} />
+          <Route path="/ordersuccess" element={<OrderSuccess />} />
           <Route path="/address" element={<AddAddressPage />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/restaurant/:id" element={<RestaurantPage />} />

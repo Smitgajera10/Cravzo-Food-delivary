@@ -1,0 +1,30 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [postgis]
+}
+
+model Rider {
+  id                   String                                @id @default(uuid())
+  userId               String                                @unique
+  name                 String
+  picture              String
+  phoneNumber           BigInt
+  addharNumber         String                                
+  drivingLicenseNumber String
+  latitude             Float?
+  longitude            Float?
+  location             Unsupported("geography(Point,4326)")?
+  isVerified           Boolean                               @default(false)
+  isAvailable           Boolean                               @default(false)
+  lastActiveAt         DateTime                              @default(now())
+  createdAt            DateTime                              @default(now())
+  updatedAt            DateTime                              @updatedAt
+
+  @@index([isAvailable])
+  @@index([location], map: "rider_location_gix", type: Gist)
+}

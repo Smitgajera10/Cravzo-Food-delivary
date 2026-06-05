@@ -11,6 +11,7 @@ export const authService = import.meta.env.VITE_AUTH_SERVICE;
 export const restaurantService = import.meta.env.VITE_RESTAURANT_SERVICE;
 export const utilsService = import.meta.env.VITE_UTILS_SERVICE;
 export const realtimeService = import.meta.env.VITE_REALTIME_SERVICE;
+export const riderService = import.meta.env.VITE_RIDER_SERVICE;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
