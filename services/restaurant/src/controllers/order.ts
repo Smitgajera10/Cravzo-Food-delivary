@@ -549,10 +549,10 @@ export const getCurrentOrderForRider = asyncHandler(async (req, res) => {
         status: {
           notIn: ["DELIVERED", "CANCELLED"],
         },
-        include: {
-          restaurant: true,
-          items: true,
-        },
+      },
+      include: {
+        restaurant: true,
+        items: true,
       },
     });
 
