@@ -9,7 +9,8 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 
-RUN npm run build
+# Use TypeScript's tsc directly — the fake 'tsc' npm package overrides the bin
+RUN node ./node_modules/typescript/bin/tsc
 
 # ---- Production Stage ----
 FROM node:22-alpine AS runner
