@@ -19,9 +19,9 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY --from=builder /app/prisma ./prisma
 RUN npm ci --omit=dev
 
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/dist ./dist
