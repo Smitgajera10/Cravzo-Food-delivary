@@ -17,7 +17,9 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# Remove the postinstall hook (prisma generate) — utils has no Prisma schema
+# and prisma is a devDependency, so it won't be available in --omit=dev install.
+RUN npm pkg delete scripts.postinstall && npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
