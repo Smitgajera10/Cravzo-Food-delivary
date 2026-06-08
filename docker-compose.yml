@@ -1,0 +1,150 @@
+version: "3.9"
+
+services:
+  # ─── Message Broker ──────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: cravzo_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin123}
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI (optional, remove in prod)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cravzo_net
+
+  # ─── Auth Service ─────────────────────────────────────────────────────────────
+  auth:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile
+    container_name: cravzo_auth
+    restart: unless-stopped
+    env_file:
+      - ./services/auth/.env
+    environment:
+      PORT: 5000
+    ports:
+      - "5000:5000"
+    networks:
+      - cravzo_net
+
+  # ─── Restaurant Service ───────────────────────────────────────────────────────
+  restaurant:
+    build:
+      context: ./services/restaurant
+      dockerfile: Dockerfile
+    container_name: cravzo_restaurant
+    restart: unless-stopped
+    env_file:
+      - ./services/restaurant/.env
+    environment:
+      PORT: 5001
+      UTILS_SERVICE: http://utils:5002
+      REALTIME_SERVICE: http://realtime:5004
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS:-admin123}@rabbitmq:5672
+    ports:
+      - "5001:5001"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cravzo_net
+
+  # ─── Utils Service ────────────────────────────────────────────────────────────
+  utils:
+    build:
+      context: ./services/utils
+      dockerfile: Dockerfile
+    container_name: cravzo_utils
+    restart: unless-stopped
+    env_file:
+      - ./services/utils/.env
+    environment:
+      PORT: 5002
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS:-admin123}@rabbitmq:5672
+      RESTAURENT_SERVICE: http://restaurant:5001
+      FRONTEND_URL: ${FRONTEND_URL}
+    ports:
+      - "5002:5002"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cravzo_net
+
+  # ─── Realtime Service ─────────────────────────────────────────────────────────
+  realtime:
+    build:
+      context: ./services/realtime
+      dockerfile: Dockerfile
+    container_name: cravzo_realtime
+    restart: unless-stopped
+    env_file:
+      - ./services/realtime/.env
+    environment:
+      PORT: 5004
+    ports:
+      - "5004:5004"
+    networks:
+      - cravzo_net
+
+  # ─── Rider Service ────────────────────────────────────────────────────────────
+  rider:
+    build:
+      context: ./services/rider
+      dockerfile: Dockerfile
+    container_name: cravzo_rider
+    restart: unless-stopped
+    env_file:
+      - ./services/rider/.env
+    environment:
+      PORT: 5005
+      UTILS_SERVICE: http://utils:5002
+      REALTIME_SERVICE: http://realtime:5004
+      RESTAURANT_SERVICE: http://restaurant:5001
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS:-admin123}@rabbitmq:5672
+    ports:
+      - "5005:5005"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cravzo_net
+
+  # ─── Frontend Client ──────────────────────────────────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+        VITE_AUTH_SERVICE: ${VITE_AUTH_SERVICE}
+        VITE_RESTAURANT_SERVICE: ${VITE_RESTAURANT_SERVICE}
+        VITE_UTILS_SERVICE: ${VITE_UTILS_SERVICE}
+        VITE_REALTIME_SERVICE: ${VITE_REALTIME_SERVICE}
+        VITE_RIDER_SERVICE: ${VITE_RIDER_SERVICE}
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY}
+    container_name: cravzo_client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - auth
+      - restaurant
+      - utils
+      - realtime
+      - rider
+    networks:
+      - cravzo_net
+
+networks:
+  cravzo_net:
+    driver: bridge
