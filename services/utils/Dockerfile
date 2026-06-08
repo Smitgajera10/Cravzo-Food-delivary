@@ -4,7 +4,8 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# Remove broken postinstall hook — 'prisma' is not a dep of this service
+RUN npm pkg delete scripts.postinstall && npm ci
 
 COPY tsconfig.json ./
 COPY src ./src
