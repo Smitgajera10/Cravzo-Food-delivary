@@ -4,13 +4,14 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY prisma ./prisma
+
 RUN npm ci
 
-COPY prisma ./prisma
 COPY tsconfig.json ./
 COPY src ./src
 
-RUN npx prisma generate && npm run build
+RUN npm run build
 
 # ---- Production Stage ----
 FROM node:22-alpine AS runner
