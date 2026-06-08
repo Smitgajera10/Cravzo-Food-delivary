@@ -69,7 +69,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
   useEffect(() => {
     if (!socket) return;
 
-    const onNewOrder = (order: IOrder) => {
+    const onNewOrder = () => {
       console.log("New order received socket");
 
       if (audioUnloacked && audioRef.current) {

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { authService } from "../main";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { GoogleLogin, useGoogleLogin } from "@react-oauth/google";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAppData } from "../context/AppContext";
 
 const Login = ()=>{
@@ -37,11 +37,11 @@ const Login = ()=>{
         }
     };
 
-    const googlelogin = useGoogleLogin({
-        onSuccess:responceGoogle,
-        onError:responceGoogle,
-        flow:"auth-code",
-    })
+    // const googlelogin = useGoogleLogin({
+    //     onSuccess:responceGoogle,
+    //     onError:responceGoogle,
+    //     flow:"auth-code",
+    // })
     
     return (
         <div className="flex flex-col min-h-screen items-center justify-center bg-white px-4">
@@ -54,7 +54,11 @@ const Login = ()=>{
                     Login or SignUp to Continue
                 </p>
 
-            
+                {loading && (
+                    <div className="flex justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E23774]"></div>
+                    </div>
+                )}
                 <GoogleLogin
                 onSuccess={responceGoogle}
                 onError={() => console.log("Login Failed")}
