@@ -21,6 +21,8 @@ const Login = ()=>{
             `${authService}/api/auth/google-login`,
             { idToken }
         );
+        console.log(authService)
+        console.log(res)
 
         // Store tokens
         localStorage.setItem("accessToken", res.data.accessToken);
