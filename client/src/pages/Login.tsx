@@ -17,11 +17,11 @@ const Login = ()=>{
         try {
         const idToken = credentialResponse.credential;
 
+        console.log(authService)
         const res = await axios.post(
             `${authService}/api/auth/google-login`,
             { idToken }
         );
-        console.log(authService)
         console.log(res)
 
         // Store tokens
