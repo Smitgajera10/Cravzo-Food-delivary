@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy Changed Services
 
 on:
   push:
@@ -10,11 +10,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Detect Changed Files
+        id: changed
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            auth:
+              - 'services/auth/**'
+
+            restaurant:
+              - 'services/restaurant/**'
+
+            rider:
+              - 'services/rider/**'
+
+            realtime:
+              - 'services/realtime/**'
+
+            utils:
+              - 'services/utils/**'
+
+            client:
+              - 'client/**'
+
+            compose:
+              - 'docker-compose.yml'
+
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -25,6 +51,46 @@ jobs:
 
             git pull origin main
 
-            docker compose down
+            if [ "${{ steps.changed.outputs.compose }}" = "true" ]; then
+              echo "docker-compose.yml changed"
+              docker compose up -d --build
+              exit 0
+            fi
 
-            docker compose up -d --build
+            if [ "${{ steps.changed.outputs.auth }}" = "true" ]; then
+              echo "Deploying Auth Service"
+              docker compose build auth
+              docker compose up -d auth
+            fi
+
+            if [ "${{ steps.changed.outputs.restaurant }}" = "true" ]; then
+              echo "Deploying Restaurant Service"
+              docker compose build restaurant
+              docker compose up -d restaurant
+            fi
+
+            if [ "${{ steps.changed.outputs.rider }}" = "true" ]; then
+              echo "Deploying Rider Service"
+              docker compose build rider
+              docker compose up -d rider
+            fi
+
+            if [ "${{ steps.changed.outputs.realtime }}" = "true" ]; then
+              echo "Deploying Realtime Service"
+              docker compose build realtime
+              docker compose up -d realtime
+            fi
+
+            if [ "${{ steps.changed.outputs.utils }}" = "true" ]; then
+              echo "Deploying Utils Service"
+              docker compose build utils
+              docker compose up -d utils
+            fi
+
+            if [ "${{ steps.changed.outputs.client }}" = "true" ]; then
+              echo "Deploying Frontend"
+              docker compose build client
+              docker compose up -d client
+            fi
+
+            docker image prune -f
